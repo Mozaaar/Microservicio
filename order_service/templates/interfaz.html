@@ -16,10 +16,8 @@
     }
     h1 {
       text-align: center;
-      margin-bottom: 1em;
     }
     label, select, button {
-      display: block;
       width: 100%;
       margin-bottom: 1em;
     }
@@ -34,7 +32,6 @@
       color: white;
       border: none;
       cursor: pointer;
-      transition: background 0.2s;
     }
     button:hover {
       background-color: #1b5dbf;
@@ -54,32 +51,60 @@
   <label for="product">Producto:</label>
   <select id="product"></select>
 
-  <button onclick="createOrder()">Hacer Pedido</button>
+  <button id="orderBtn">Hacer Pedido</button>
 
   <h2>Resultado:</h2>
   <pre id="result">Esperando pedido...</pre>
 
   <script>
+    // Cargar productos al cargar la página
     async function loadProducts() {
-      const res = await fetch("http://localhost:8000/products");
-      const products = await res.json();
-      const select = document.getElementById("product");
+      try {
+        const res = await fetch("http://localhost:8000/products");
+        const products = await res.json();
+        const select = document.getElementById("product");
 
-      products.forEach(p => {
-        const option = document.createElement("option");
-        option.value = p.id;
-        option.textContent = `${p.name} - $${p.price}`;
-        select.appendChild(option);
-      });
+        products.forEach(p => {
+          const option = document.createElement("option");
+          option.value = p.id;
+          option.textContent = `${p.name} - $${p.price}`;
+          select.appendChild(option);
+        });
+      } catch (err) {
+        document.getElementById("result").textContent = `Error cargando productos: ${err.message}`;
+      }
     }
 
+    // Crear un pedido
     async function createOrder() {
       const id = document.getElementById("product").value;
-      const res = await fetch(`http://localhost:8001/order/${id}`, { method: "POST" });
-      const data = await res.json();
-      document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+      const result = document.getElementById("result");
+
+      result.textContent = "Procesando pedido...";
+
+      try {
+        const res = await fetch(`http://localhost:8001/order/${id}`, {
+          method: "POST"
+        });
+
+        const contentType = res.headers.get("content-type");
+
+        if (contentType && contentType.includes("application/json")) {
+          const data = await res.json();
+          result.textContent = JSON.stringify(data, null, 2);
+        } else {
+          const text = await res.text();
+          result.textContent = `Respuesta no JSON:\n${text}`;
+        }
+      } catch (err) {
+        result.textContent = `Error al hacer el pedido: ${err.message}`;
+      }
     }
 
+    // Enlazar evento al botón
+    document.getElementById("orderBtn").addEventListener("click", createOrder);
+
+    // Cargar productos al inicio
     loadProducts();
   </script>
 </body>
